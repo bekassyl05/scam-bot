@@ -1,0 +1,55 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: scam_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: scamuser
+      POSTGRES_PASSWORD: scampassword
+      POSTGRES_DB: scamdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        INSTALL_PLAYWRIGHT: "yes"   # егер playwright керек болса
+    container_name: scam_api
+    restart: always
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://scamuser:scampassword@postgres:5432/scamdb
+      PORT: 8001
+    ports:
+      - "8001:8001"
+    command: >
+      sh -c "uvicorn api.main:app --host 0.0.0.0 --port 8001 --workers 1"
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: scam_bot
+    restart: always
+    depends_on:
+      - api
+    env_file:
+      - .env
+    environment:
+      API_SAVE_URL: http://api:8001/report
+      API_FALSE_POSITIVE_URL: http://api:8001/false_positive
+      API_FEEDBACK_URL: http://api:8000/feedback
+    command: >
+      sh -c "python -m bot.bot"
+
+volumes:
+  postgres_data:
