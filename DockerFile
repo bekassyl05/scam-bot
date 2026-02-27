@@ -1,0 +1,70 @@
+# syntax=docker/dockerfile:1
+
+# ---------- Stage 1: base system + python deps ----------
+FROM python:3.11-slim-bullseye AS base
+
+ARG PIP_EXTRA_INDEX_URL=""
+ARG INSTALL_PLAYWRIGHT="no"   # build-arg INSTALL_PLAYWRIGHT=yes to install playwright & browsers
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    POETRY_VIRTUALENVS_CREATE=false \
+    PATH="/home/appuser/.local/bin:$PATH"
+
+# System packages required for many libs (tesseract, zbar, libmagic, build deps)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    curl \
+    ca-certificates \
+    libssl-dev \
+    libffi-dev \
+    libxml2-dev libxslt1-dev \
+    pkg-config \
+    libjpeg-dev zlib1g-dev \
+    libmagic1 \
+    libzbar0 \
+    tesseract-ocr \
+    poppler-utils \
+    wget \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash appuser
+WORKDIR /home/appuser/app
+RUN chown appuser:appuser /home/appuser/app
+USER appuser
+
+# Copy only requirements first to leverage Docker cache
+COPY --chown=appuser:appuser requirements.txt ./requirements.txt
+
+# Upgrade pip and install python deps
+RUN python -m pip install --upgrade pip setuptools wheel
+# Allow passing extra index (private wheels) during build
+RUN python -m pip install --no-cache-dir -r requirements.txt
+
+# Optionally install Playwright and its browsers (build-time choice)
+# If INSTALL_PLAYWRIGHT=yes build-arg supplied, we install playwright & browsers
+USER root
+RUN if [ "$INSTALL_PLAYWRIGHT" = "yes" ]; then \
+      python -m pip install --no-cache-dir playwright && \
+      # install system dependencies for playwright browsers (Playwright provides helper)
+      playwright install --with-deps chromium firefox webkit || true ; \
+    fi
+
+# Change back to non-root
+USER appuser
+
+# Copy application code
+COPY --chown=appuser:appuser . /home/appuser/app
+
+# Expose port used by uvicorn
+EXPOSE 8001
+
+# Default envs (can be overridden at runtime)
+ENV RENDER_MODE="" \
+    PORT=8001 \
+    PYTHONPATH="/home/appuser/app"
+
+# Use a simple entrypoint that runs uvicorn (you can replace with supervisor/gunicorn + uvicorn workers)
+CMD ["sh", "-c", "uvicorn api.main:app --host 0.0.0.0 --port ${PORT} --workers 1"]
