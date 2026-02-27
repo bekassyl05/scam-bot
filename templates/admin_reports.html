@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="kk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin — Reports</title>
+
+  <link rel="stylesheet" href="/static/admin.css" />
+
+  <style>
+    :root{
+      --bg:#071022;
+      --panel:#0b1622;
+      --muted:#9aa6b2;
+      --accent:#0be4c0;
+      --text:#e6eef8;
+      --card: rgba(255,255,255,0.03);
+    }
+    html,body{height:100%; margin:0; padding:0; direction:ltr; text-align:left;
+      background:linear-gradient(180deg,#041022 0%, #061126 100%); color:var(--text); font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;}
+    a { color: var(--accent); text-decoration: none; word-break:break-all; }
+    .container { max-width:1200px; margin:18px auto; padding:14px; box-sizing:border-box; }
+
+    header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; }
+    header h2 { margin:0; font-size:20px; color:var(--text); }
+    .muted { color:var(--muted); font-size:13px; }
+
+    .controls { display:flex; gap:10px; align-items:center; }
+
+    .layout { display:grid; grid-template-columns:300px 1fr; gap:18px; align-items:start; }
+
+    .sidebar { background:var(--panel); padding:12px; border-radius:8px; box-shadow:0 6px 18px rgba(2,8,16,0.4); }
+    .sidebar label { display:block; color:var(--muted); font-size:13px; margin-bottom:10px; }
+    .sidebar input[type="date"], .sidebar input[type="number"], .sidebar select {
+      width:100%; padding:8px 10px; margin-top:6px; border-radius:6px; border:1px solid rgba(255,255,255,0.03); background:transparent; color:var(--text);
+    }
+    .sidebar .actions { margin-top:8px; display:flex; gap:8px; }
+
+    .main { background:transparent; }
+
+    table { width:100%; border-collapse:collapse; font-size:14px; color:var(--text); margin:0; }
+    thead th { text-align:left; padding:12px 8px; color:var(--muted); border-bottom:1px solid rgba(255,255,255,0.03); position:sticky; top:0; background:linear-gradient(180deg, rgba(5,12,20,0.6), rgba(10,18,28,0.6)); z-index:2; }
+    tbody td { padding:10px 8px; border-bottom:1px solid rgba(255,255,255,0.02); vertical-align:top; }
+    .badge { display:inline-block; padding:4px 8px; border-radius:8px; font-size:12px; background:rgba(255,255,255,0.04); color:#d8e9ff; }
+
+    .link-small { color:#0be4c0; font-weight:600; text-decoration:none; }
+
+    .details { padding:10px; background: rgba(255,255,255,0.02); border-radius:8px; margin-top:8px; color:var(--text); }
+    pre.analysis { background:rgba(0,0,0,0.25); padding:10px; border-radius:6px; overflow:auto; max-height:320px; color:#e6eef8; white-space:pre-wrap; word-break:break-word; }
+
+    .toggle-btn { cursor:pointer; color:var(--muted); background:none; border:0; padding:6px 8px; border-radius:6px; }
+    .toggle-btn:hover{ color:var(--text); background:rgba(255,255,255,0.02); }
+
+    .btn { cursor:pointer; border:0; padding:8px 10px; border-radius:8px; background:transparent; color:var(--muted); }
+    .btn-primary { background:linear-gradient(180deg,#16c9aa,#0fb393); color:#042226; font-weight:700; }
+
+    .render-preview { max-width:360px; max-height:220px; object-fit:contain; border-radius:6px; border:1px solid rgba(255,255,255,0.03); }
+
+    @media (max-width:900px) {
+      .layout { grid-template-columns: 1fr; }
+      header { flex-direction:column; align-items:flex-start; gap:8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h2>ScamBot — Репорттар</h2>
+        <div class="muted">Күдікті сілтемелер мен файлдар жөніндегі репорттар</div>
+      </div>
+      <div class="controls">
+        <a class="muted" href="/report/test">Manual Test</a>
+        <a class="muted" href="/reports/export?format=json">Export JSON</a>
+        <a class="muted" href="/reports/export?format=csv">Export CSV</a>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <form method="get" action="/report">
+          <label>Date from:
+            <input type="date" name="date" value="{{ request.query_params.get('date','') }}">
+          </label>
+
+          <label>Min %:
+            <input type="number" name="min_conf" min="0" max="100" value="{{ request.query_params.get('min_conf','0') }}">
+          </label>
+
+          <label>Source:
+            <select name="source">
+              <option value="" {% if request.query_params.get('source','')=='' %}selected{% endif %}>Барлығы</option>
+              <option value="private" {% if request.query_params.get('source','')=='private' %}selected{% endif %}>Private</option>
+              <option value="group" {% if request.query_params.get('source','')=='group' %}selected{% endif %}>Group</option>
+              <option value="file" {% if request.query_params.get('source','')=='file' %}selected{% endif %}>File</option>
+            </select>
+          </label>
+
+          <div class="actions">
+            <button class="btn btn-primary" type="submit">Apply</button>
+            <a class="btn" href="/report">Reset</a>
+          </div>
+        </form>
+      </aside>
+
+      <main class="main">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>URL / File</th>
+              <th>Domain</th>
+              <th>Conf</th>
+              <th>Source</th>
+              <th>By</th>
+              <th>Time</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in reports %}
+              {% set conf_percent = ((r.confidence or 0) * 100) | int %}
+              {% set p = r.page_info or {} %}
+              <tr>
+                <td style="width:48px;">{{ r.id }}</td>
+
+                <td style="max-width:430px; word-break:break-word;">
+                  {% if r.url %}
+                    <div><a class="link-small" href="{{ r.final_url or r.url }}" target="_blank" rel="noopener noreferrer">{{ (r.final_url or r.url) | truncate(80) }}</a></div>
+                  {% elif r.file_name %}
+                    <div>(file) <span class="badge">{{ r.file_name }}</span></div>
+                  {% else %}
+                    <div class="muted">—</div>
+                  {% endif %}
+
+                  {% if r.candidates %}
+                    <div class="muted" style="margin-top:6px;font-size:13px;">Candidates:
+                      {% for c in r.candidates %}
+                        <div style="font-size:12px; margin-left:6px;">• {{ c }}</div>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                </td>
+
+                <td style="width:140px;">{{ r.domain or '-' }}</td>
+                <td style="width:60px;">{{ conf_percent }}%</td>
+                <td style="width:90px;">{{ r.source or '-' }}</td>
+                <td style="width:90px;">{{ r.reported_by or '-' }}</td>
+
+                <td style="width:130px;">
+                  {% if r.created_at %}
+                    {% if r.created_at.__class__.__name__ == 'datetime' %}
+                      {{ r.created_at.strftime('%Y-%m-%d %H:%M') }}
+                    {% else %}
+                      {{ r.created_at | string | replace('T',' ') | truncate(16, True, '') }}
+                    {% endif %}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+
+                <td style="width:90px;">
+                  <button class="toggle-btn" data-target="details-{{ r.id }}" onclick="toggleDetails('details-{{ r.id }}')">▶ Қарау</button>
+                </td>
+              </tr>
+
+              <tr id="details-{{ r.id }}" style="display:none;">
+                <td colspan="8" style="padding:12px;">
+                  <div class="details">
+                    {% if r.reasons %}
+                      <div><strong>Негізгі себептер:</strong></div>
+                      <ul>
+                        {% for reason in r.reasons %}
+                          <li>{{ reason }}</li>
+                        {% endfor %}
+                      </ul>
+                    {% endif %}
+
+                    {% if r.llm_summary %}
+                      <div style="margin-top:8px;">
+                        <strong>LLM қысқаша (қысқа):</strong>
+                        <div class="muted" style="margin-top:6px;">{{ r.llm_summary }}</div>
+                      </div>
+                    {% endif %}
+
+                    {% if r.render_info and (r.render_info.title or r.render_info.text_excerpt) %}
+                      <div style="margin-top:8px;">
+                        <strong>Render summary:</strong>
+                        <div class="muted" style="margin-top:6px;">
+                          {% if r.render_info.title %}<div><strong>Title:</strong> {{ r.render_info.title }}</div>{% endif %}
+                          {% if r.render_info.text_excerpt %}<div style="margin-top:6px;">{{ r.render_info.text_excerpt }}</div>{% endif %}
+                        </div>
+                      </div>
+                    {% endif %}
+
+                    {% if r.screenshot %}
+                      <div style="margin-top:10px;">
+                        <strong>Screenshot preview:</strong>
+                        <div style="margin-top:6px;">
+                          <img class="render-preview" src="{{ r.screenshot }}" alt="screenshot preview">
+                        </div>
+                      </div>
+                    {% endif %}
+
+                    {% if p %}
+                      <div style="margin-top:8px;">
+                        <strong>Page analysis:</strong>
+                        <div class="muted" style="margin-top:6px;">
+                          {% if p.has_password_input %}<div>⚠️ <strong>Password input</strong> табылды</div>{% endif %}
+                          {% if p.has_card_keywords %}<div>⚠️ <strong>Card-related input</strong> табылды</div>{% endif %}
+                          <div>Form actions: {{ (p.form_actions | length) }}</div>
+                          {% if p.external_form_actions and p.external_form_actions | length > 0 %}
+                            <div style="margin-top:6px;">External form actions:
+                              <ul>
+                                {% for act in p.external_form_actions %}
+                                  <li><a href="{{ act }}" target="_blank" rel="noopener noreferrer">{{ act|truncate(140) }}</a></li>
+                                {% endfor %}
+                              </ul>
+                            </div>
+                          {% endif %}
+                          <div>Scripts loaded: {{ (p.scripts | length) }}</div>
+                        </div>
+                      </div>
+                    {% endif %}
+
+                    <div style="margin-top:10px;">
+                      <strong>Analysis details (ұзын JSON):</strong>
+                      <pre class="analysis">{{ r.analysis_pretty | safe }}</pre>
+                    </div>
+
+                    <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
+                      {% if r.final_url %}
+                        <a class="btn btn-primary" href="{{ r.final_url }}" target="_blank">Open final URL</a>
+                      {% endif %}
+                      <a class="btn" href="/reports/export?format=json">Export all JSON</a>
+                      <button class="btn" onclick="copyToClipboard({{ r | tojson | safe }})">Copy report JSON</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="8" style="padding:12px; color:var(--muted);">Репорттар табылмады</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </main>
+    </div>
+  </div>
+
+<script>
+  function toggleDetails(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.display = (el.style.display === 'none' || el.style.display === '') ? 'table-row' : 'none';
+    const btn = document.querySelector('[data-target="' + id + '"]');
+    if (btn) { btn.textContent = (el.style.display === 'table-row') ? '▼ Жабу' : '▶ Қарау'; }
+  }
+
+  function copyToClipboard(obj) {
+    try {
+      const s = JSON.stringify(obj, null, 2);
+      navigator.clipboard.writeText(s).then(() => { alert("JSON көшірілді буферге"); }, () => { alert("Көшіру мүмкін болмады"); });
+    } catch (e) {
+      alert("Көшіру қатесі: " + e);
+    }
+  }
+</script>
+</body>
+</html>

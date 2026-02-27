@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="kk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Сақталған репорттар — Scam Bot</title>
+  <link rel="stylesheet" href="/static/style.css">
+
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <h1>Сақталған репорттар</h1>
+      <div class="header-actions">
+        <a class="small-link" href="/reports/export?format=csv" title="Export CSV">Export CSV</a>
+        <a class="small-link" href="/reports/export?format=json" title="Export JSON">Export JSON</a>
+      </div>
+    </header>
+
+    <section class="controls">
+      <form method="get" action="/report" class="controls-form">
+        <label>Күні:
+          <input class="input-sm" type="date" name="date" value="{{ request.query_params.get('date','') }}">
+        </label>
+
+        <label>Confidence &gt;=
+          <input class="input-sm" type="number" min="0" max="100" name="min_conf" value="{{ request.query_params.get('min_conf','0') }}">
+        </label>
+
+        <label>Source:
+          <select name="source" class="input-sm">
+            <option value="">Барлығы</option>
+            <option value="private" {% if request.query_params.get("source","") == "private" %}selected{% endif %}>Private</option>
+            <option value="group"   {% if request.query_params.get("source","") == "group"   %}selected{% endif %}>Group</option>
+            <option value="file"    {% if request.query_params.get("source","") == "file"    %}selected{% endif %}>File</option>
+          </select>
+        </label>
+
+        <button class="btn" type="submit">Фильтр</button>
+        <a class="btn btn-ghost" href="/report" style="margin-left:8px;">Тазалау</a>
+      </form>
+    </section>
+
+    <section class="table-wrap">
+      <table class="reports">
+        <colgroup>
+          <col style="width:60px">
+          <col style="width:42%">
+          <col style="width:18%">
+          <col style="width:90px">
+          <col style="width:80px">
+          <col style="width:120px">
+          <col style="width:150px">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>URL / File / Candidates</th>
+            <th>Domain</th>
+            <th>Confidence</th>
+            <th>Source</th>
+            <th>Reported by</th>
+            <th>Created at</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in reports %}
+          <tr class="{% if r.confidence and r.confidence >= 0.7 %}danger{% elif r.confidence and r.confidence >= 0.3 %}warn{% endif %}">
+            <td class="cell-id">{{ r.id }}</td>
+
+            <td class="cell-main">
+              {% if r.url %}
+                <div class="main-url"><a href="{{ r.url }}" title="{{ r.url }}" target="_blank" rel="noopener noreferrer">{{ r.url|truncate(80) }}</a></div>
+              {% elif r.file_name %}
+                <div class="file-name">(file) {{ r.file_name }}</div>
+              {% endif %}
+
+              {% if r.candidates %}
+                <div class="candidates">
+                  <strong>Candidates:</strong>
+                  <ul>
+                  {% for c in r.candidates %}
+                    <li title="{{ c }}">{{ c|truncate(70) }}</li>
+                  {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+
+              {% if r.reasons %}
+                <div class="reasons"><strong>Reasons:</strong>
+                  <ul>
+                  {% for reason in r.reasons %}
+                    <li>{{ reason }}</li>
+                  {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+            </td>
+
+            <td class="cell-domain">{{ r.domain or '-' }}</td>
+            <td class="cell-conf">{{ ((r.confidence or 0) * 100) | int }}%</td>
+            <td class="cell-source">{{ r.source or '-' }}</td>
+            <td class="cell-rep">{{ r.reported_by or '-' }}</td>
+            <td class="cell-time">{% if r.created_at %}{{ r.created_at.strftime('%Y-%m-%d %H:%M') }}{% else %}-{% endif %}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" style="text-align:center; padding:24px 0;">Репорттар табылмады</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <footer class="page-footer">
+      <small>Scam Bot — локальдық дамытушы интерфейс (жоба)</small>
+    </footer>
+  </div>
+</body>
+</html>

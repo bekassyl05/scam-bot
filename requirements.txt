@@ -1,0 +1,48 @@
+# --- Telegram bot ---
+aiogram>=3.0.0
+
+# --- API / backend ---
+fastapi
+uvicorn[standard]
+pydantic
+python-multipart
+Jinja2
+
+# --- Networking / utils ---
+requests
+python-dotenv
+validators
+tldextract
+python-magic
+
+# --- HTML / content analysis ---
+beautifulsoup4
+rapidfuzz
+
+# --- File / document analysis ---
+Pillow
+pytesseract
+pyzbar
+PyMuPDF
+python-docx
+
+# --- Database ---
+sqlalchemy
+numpy
+
+# --- Rendering / browser analysis (OPTIONAL) ---
+playwright
+html2text
+
+# --- LLM integration (OPTIONAL) ---
+openai>=1.0.0
+
+# --- Screenshot / image utils ---
+opencv-python-headless
+
+python-magic
+pefile
+androguard
+yara-python
+requests
+python-magic-bin

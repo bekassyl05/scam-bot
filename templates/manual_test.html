@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="kk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Manual Test — ScamBot</title>
+  <link rel="stylesheet" href="/static/admin.css" />
+  <style>
+    .tester-card{
+      background: rgba(255,255,255,0.02);
+      border-radius:12px;
+      padding:18px;
+      box-shadow:0 6px 18px rgba(0,0,0,0.4);
+      max-width:920px;
+      margin:12px auto;
+    }
+    .form-row{display:flex; gap:12px; align-items:center; margin-bottom:12px; flex-wrap:wrap}
+    label{font-size:13px; color:#d8e9ff}
+    input[type="text"], input[type="url"], select, input[type="number"]{
+      padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); background:rgba(255,255,255,0.02); color:#e6eef8;
+      min-width:200px;
+    }
+    .file-input { display:flex; gap:10px; align-items:center;}
+    .file-name { color:#9aa6b2; font-size:13px; }
+    .btn-primary{ background:#00c2a8; color:#072128; padding:8px 12px; border-radius:8px; font-weight:700; border:none; cursor:pointer}
+    .note{ color:#9aa6b2; font-size:13px; margin-top:10px; }
+  </style>
+</head>
+<body>
+  <div class="admin-app" style="max-width:1100px; margin:20px auto;">
+    <div style="display:flex; gap:20px; align-items:center; justify-content:space-between;">
+      <div style="color:#e6eef8; font-weight:700; font-size:18px">Manual Test</div>
+      <div>
+        <a class="small-link" href="/report">Back to reports</a>
+      </div>
+    </div>
+
+    <div class="tester-card">
+      <form id="manualForm" action="/report/test" method="post" enctype="multipart/form-data">
+        <div class="form-row">
+          <label>URL:</label>
+          <input type="url" name="url" placeholder="https://example.com/phish" />
+          <label>Source:</label>
+          <select name="source">
+            <option value="private">Private</option>
+            <option value="group">Group</option>
+            <option value="file">File</option>
+          </select>
+          <label>Confidence (0-1):</label>
+          <input type="number" step="0.01" min="0" max="1" name="confidence" value="0.5" style="width:80px" />
+        </div>
+
+        <div class="form-row file-input">
+          <label>Файл жүктеу (опция):</label>
+          <input id="fileInput" type="file" name="file" />
+          <div class="file-name" id="fileName">Файл таңдалмады</div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <label>Reported by (id):</label>
+          <input type="text" name="reported_by" placeholder="12345 (өзіңіз үшін тест)" />
+        </div>
+
+        <div style="margin-top:16px; display:flex; gap:12px; align-items:center;">
+          <button class="btn-primary" type="submit">Жіберу</button>
+          <a class="btn btn-ghost" href="/report" style="text-decoration:none; color:inherit;">Отмена</a>
+        </div>
+
+        <div class="note">Ескерту: файл жүктесе, сервер оны қысқа уақытқа сақтап, метадеректерді репортқа қосады. Толық файл сканері әзірге тек серверлік бот арқылы жұмыс істейді.</div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // show selected filename
+    const fileInput = document.getElementById('fileInput')
+    const fileName = document.getElementById('fileName')
+    fileInput.addEventListener('change', (e) => {
+      if (!e.target.files || e.target.files.length === 0) {
+        fileName.textContent = 'Файл таңдалмады'
+        return
+      }
+      const f = e.target.files[0]
+      fileName.textContent = f.name + ' (' + Math.round(f.size/1024) + ' KB)'
+    })
+  </script>
+</body>
+</html>
