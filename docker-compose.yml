@@ -30,7 +30,7 @@ services:
       DATABASE_URL: postgresql+psycopg2://scamuser:scampassword@postgres:5432/scamdb
       PORT: 8001
     ports:
-      - "8001:8001"
+      - "8001:8000"
     command: >
       sh -c "uvicorn api.main:app --host 0.0.0.0 --port 8001 --workers 1"
 
@@ -47,7 +47,7 @@ services:
     environment:
       API_SAVE_URL: http://api:8001/report
       API_FALSE_POSITIVE_URL: http://api:8001/false_positive
-      API_FEEDBACK_URL: http://api:8000/feedback
+      API_FEEDBACK_URL: http://api:8001/feedback
     command: >
       sh -c "python -m bot.bot"
 
